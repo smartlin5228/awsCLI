@@ -42,6 +42,92 @@ function find_vpc() {
 		--output text	
 			
 }
+
+# helper function
+function find_subnet() {
+	local subnet_name=$1
+	aws ec2 describe-subnets \
+		--filters \
+			Name=vpc-id,Values=$(find_vpc) \
+			Name=tag:Name,Values=${subnet_name} \
+		--query "Subnets[].SubnetId" \
+		--output text
+}
+
+function get_security_group() {
+	local group_name=$1
+	aws ec2 describe-security-groups \
+		--region "$REGION_NAME" \
+		--filters \
+			Name=group-name,Values=${group_name} \
+			Name=vpc-id,Values=$(find_vpc) \
+		--query SecurityGroups[].GroupId \
+		--output text
+}
+
+function get_keypair() {
+	aws ec2 describe-key-pairs \
+		--query KeyPairs[].KeyName \
+		--output text
+}
+
+function find_hostname() {
+	local instance_ids=$1
+	aws ec2 describe-instances \
+		--instance_ids "$instance_id" \
+		--output text \
+		--query Reservations[].Instances[0].PublicDnsName
+}
+
+function launch_instance() {
+	local image_id=$(list_amis $REGION_NAME amzn-ami-hvm-* | sort -rk 3,3 | grep -v rc | head -n 1 | cut -f 2)
+	local subnet_id=$(find_subnet public)
+	local security_groups=$(get_security_group default)
+	local instance_id=$(aws ec2 run-instances \
+		--associate-public-ip-address \
+		--image-id "$image_id" \
+		--key-name "$(get_keypair)" \
+		--subnet-id "${subnet_id}" \
+		--security-group-ids "$security_groups" \
+		--instance-type "$INSTANCE_TYPE" \
+		--output text \
+		--query "Instances[0].InstanceId"
+	)
+
+	aws ec2 create-tags \
+		--resources "$instance_id" \
+		--tags Key=enviroment,Value=demo
+	printf "Wait %s: %s until running..\n" $INSTANCE_TYPE $instance_id
+	aws ec2 wait instance-running --instance-ids "$instance_id"
+
+	local instance_hostname=$(aws ec2 describe-instances \
+		--instance-ids "$instance_id" \
+		--output text \
+		--query Reservations[].Instances[0].PublicDnsName
+	)
+
+	printf "Wait for SSH ready to connect..\n"
+	local retry=5
+	while [ $retry -gt 0 ]; do
+		ssh -o StrictHostKeyChecking=no $instance_hostname
+		# Use $? check the last return value of ssh, to see if the connection has been established
+		if [ $? -eq 0 ]; then
+			echo "SSH succeed."
+			break
+		fi
+		echo "Retrying..\n"
+		((retry-=1))
+	done
+}
+
+function terminate_instances() {
+	local instance_ids=$(aws ec2 describe-instances \
+		--filters Name="instance-state-name",Values="running" \
+		--query "Reservations[].Instances[0].InstanceId" \
+		--output text
+	)
+	aws ec2 terminate-instances --instance-ids ${instance_ids}
+}
 # Run selected example
 CHOICE=$1
 CMD=''
@@ -58,6 +144,12 @@ CMD=''
 [ 6 = $CHOICE ] && CMD="list_amis $REGION_NAME amzn-ami-hvm-*"
 
 [ 7 = $CHOICE ] && CMD="find_vpc"
+
+[ 8 = $CHOICE ] && CMD="get_security_group default"
+
+[ 9 = $CHOICE ] && CMD="launch_instance"
+
+[ 10 = $CHOICE ] && CMD="terminate_instances"
 # - Unrecognized CMD
 if [ -z "$CMD" ]
 then

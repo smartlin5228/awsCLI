@@ -22,17 +22,25 @@ function list_amis() {
 	local region=$1
 	local name=$2
 	aws ec2 describe-images \
-		 --region "${region}"
-		 --filters \
-			 Name=owner-alias,Values=amazon \
-			 Name=name,Values="$name" \ 
-			 Name=architecture,Values=x86_64 \
-			 Name=virtualization-type,Values=hvm \
-			 Name=root-device-type,Values=ebs \ 
-			 Name=block-device-mapping.volume-type,Values=gp2 \
+		--region "${region}" \
+		--filters \
+			Name=owner-alias,Values=amazon \
+			Name=name,Values="$name" \
+			Name=architecture,Values=x86_64 \
+			Name=virtualization-type,Values=hvm \
+			Name=root-device-type,Values=ebs \
+			Name=block-device-mapping.volume-type,Values=gp2 \
 		--query "Images[*].['$region',ImageId,Name,Description]" \
 		--output text
-	
+}
+# - Note: dont put a blank space after backslash
+function find_vpc() {
+	aws ec2 describe-vpcs \
+		--filters \
+			Name=tag:Name,Values=${VPC_NAME} \
+		--query "Vpcs[].VpcId" \
+		--output text	
+			
 }
 # Run selected example
 CHOICE=$1
@@ -48,6 +56,8 @@ CMD=''
 [ 5 = $CHOICE ] && CMD="aws ec2 describe-regions --query Regions[0].RegionName"
 
 [ 6 = $CHOICE ] && CMD="list_amis $REGION_NAME amzn-ami-hvm-*"
+
+[ 7 = $CHOICE ] && CMD="find_vpc"
 # - Unrecognized CMD
 if [ -z "$CMD" ]
 then

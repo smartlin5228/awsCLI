@@ -30,7 +30,7 @@ CMD=''
 
 [ 4 = $CHOICE ] && CMD="aws ec2 describe-regions --query Regions[].RegionName"
 
-
+[ 5 = $CHOICE ] && CMD="aws ec2 describe-regions --query Regions[0].RegionName"
 # - Unrecognized CMD
 if [ -z "$CMD" ]
 then

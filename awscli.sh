@@ -18,7 +18,22 @@ then
 fi
 
 # Functions
-
+function list_amis() {
+	local region=$1
+	local name=$2
+	aws ec2 describe-images \
+		 --region "${region}"
+		 --filters \
+			 Name=owner-alias,Values=amazon \
+			 Name=name,Values="$name" \ 
+			 Name=architecture,Values=x86_64 \
+			 Name=virtualization-type,Values=hvm \
+			 Name=root-device-type,Values=ebs \ 
+			 Name=block-device-mapping.volume-type,Values=gp2 \
+		--query "Images[*].['$region',ImageId,Name,Description]" \
+		--output text
+	
+}
 # Run selected example
 CHOICE=$1
 CMD=''
@@ -31,6 +46,8 @@ CMD=''
 [ 4 = $CHOICE ] && CMD="aws ec2 describe-regions --query Regions[].RegionName"
 
 [ 5 = $CHOICE ] && CMD="aws ec2 describe-regions --query Regions[0].RegionName"
+
+[ 6 = $CHOICE ] && CMD="list_amis $REGION_NAME amzn-ami-hvm-*"
 # - Unrecognized CMD
 if [ -z "$CMD" ]
 then

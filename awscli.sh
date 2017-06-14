@@ -24,11 +24,11 @@ CHOICE=$1
 CMD=''
 [ 1 = $CHOICE ] && CMD="aws ec2 describe-regions"
 
-[ 2 = $CHOISE ] && CMD="aws ec2 describe-regions --output text"
+[ 2 = $CHOICE ] && CMD="aws ec2 describe-regions --output text"
 
 [ 3 = $CHOICE ] && CMD="aws ec2 describe-regions --output table"
 
-[ 4 = $CHOISE ] && CMD="aws ec2 describe-regions --query Regions[].RegionName"
+[ 4 = $CHOICE ] && CMD="aws ec2 describe-regions --query Regions[].RegionName"
 
 
 # - Unrecognized CMD

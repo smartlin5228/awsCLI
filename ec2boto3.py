@@ -92,13 +92,68 @@ class Benchmark:
     def get_instances(self, state='running', instance_types=''):
         instances = self.ec2.instances.filter(Filters=[
             {'Name': 'instance-state-name', 'Values':['running']},
-            {'Name': 'tag:enviroment', 'Values':[self.tags['enviroment']]} ])
+            {'Name': 'tag:enviroment', 'Values':[self.tags['enviroment']]}])
         if instance_types:
             instance_types = instance_types.split(',')
             instances = [instance for instance in instances if \
                          instance.instance_type in instance_types]
 
         return instances
+
+    def create_instance(instance_type, instance_type, count):
+        self.verbose("Creating: %s" % instance_type + \
+                    "(ami=%(ami)s, count=%(count)s, key=%(key)s)..." \
+                    % self.config, 1)
+        launched_instances = defaultdict(list)
+        try:
+            instances = self.ec2.create_instance(
+                DryRun=self.opts.dryrun,
+                ImageId=self.config['ami'],
+                InstanceType=instance_type,
+                MinCount=count,
+                MaxCount=count,
+                KeyName=self.config['key'],
+                SubnetId=self.config['subnet_id'],
+                BlockDeviceMappings=[{
+                    'DeviceName': '/dev/xvda',
+                    'Ebs': {
+                        'VolumeSize': 16,
+                        'DeleteOnTermination': True,
+                        'VolumeType': 'gp2'
+                    }
+                }])
+            for instance in instances:
+                instance.create_tags(
+                DryRun=self.opts.dryrun,
+                    Tags=[{'Key': 'enviroment', 'Value': self.tags['enviroment']}])
+            launched_instances[instance_type].extend(instances)
+            self.verbose("Successfully launched.\n", 1)
+        except botocore.exceptions.ClientError as ce:
+            if ce.response['Error'].get('Code') == 'DryRunOperation':
+                self.verbose("\n", 1)
+            else:
+                raise
+            return launched_instances
+
+
+    def launch(self):
+        self.verbose("Launching total %s instances..\n" % \
+                    (self.config['count'] * \
+                     len(self.config['instance_types'])), 0)
+        for instance_type in self.config['instance_types']:
+            running_instances = self.get_instances(instance_types=instance_type)
+            n_running_instances = len(list(running_instances))
+            count = self.config['count'] - n_running_instances
+            if n_running_instances > 0:
+                msg = " %s: %s instances already running, "\
+                        % (instance_type, n_running_instances)
+                if count == 0:
+                    self.verbose(msg + "do nothing.\n", 1)
+                elif count > 0:
+                    self.verbose(msg + "create %s more.\n", 1)
+                    self.create_instance(instance_type, count) # - TODO: create
+                else:
+                    slef
 
     def clean(self):
         for instance in self.get_instances():
@@ -121,7 +176,7 @@ class Benchmark:
         if self.opts.dryrun:
             print "Dry run, checking permission while nothing will be executed.\n"
         else:
-            pring "Done.\n"
+            print "Done.\n"
 
 
 

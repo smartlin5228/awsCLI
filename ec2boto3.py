@@ -88,6 +88,41 @@ class Benchmark:
             
             if self.opts.verbose >= 1:
                 print " %s: %s = %s " %(profile, name, self.config[name])
+    
+    def get_instances(self, state='running', instance_types=''):
+        instances = self.ec2.instances.filter(Filters=[
+            {'Name': 'instance-state-name', 'Values':['running']},
+            {'Name': 'tag:enviroment', 'Values':[self.tags['enviroment']]} ])
+        if instance_types:
+            instance_types = instance_types.split(',')
+            instances = [instance for instance in instances if \
+                         instance.instance_type in instance_types]
+
+        return instances
+
+    def clean(self):
+        for instance in self.get_instances():
+            self.terminate_instance(instance) # TODO: terminate instances
+            bucket = self.s3.Bucket("benchmark-%s" % instance.instance_id)
+            self.verbose("deleting bucket %s. \n" % bucket.name)
+            for key in bucket.objects.all():
+                key.delete()
+            bucket.delete()
+        
+    def run(self):
+        if self.opts.clean:
+            self.clean()
+            return
+        
+        self.lauch() # - TODO: Lauch instance
+        self.configure # - TODO: Instance configuration
+        self.do() # - TODO: Helper function
+
+        if self.opts.dryrun:
+            print "Dry run, checking permission while nothing will be executed.\n"
+        else:
+            pring "Done.\n"
+
 
 
 

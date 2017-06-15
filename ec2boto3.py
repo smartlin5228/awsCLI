@@ -116,7 +116,7 @@ class Benchmark:
         
         self.lauch() # - TODO: Lauch instance
         self.configure # - TODO: Instance configuration
-        self.do() # - TODO: Helper function
+        self.do() # - TODO: Helper function, performance check
 
         if self.opts.dryrun:
             print "Dry run, checking permission while nothing will be executed.\n"

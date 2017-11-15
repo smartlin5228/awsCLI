@@ -15,6 +15,8 @@ from collections import defaultdict
 from paramiko.ssh_exception import *
 from test import pystone
 
+# - Setting default arguments
+
 
 def parse_argv():
     parser = argparse.ArgumentParser(
@@ -44,9 +46,12 @@ def parse_argv():
     args = parser.parse_args()
     return args
 
+# - Beachmark functions
+
 
 class Benchmark:
 
+    # - Load configurations file from path (ec2,s3,ssh)
     def __init__(self, opts):
         self.opts = opts
         self.parse_config(self.opts.config, self.opts.profile)
@@ -62,11 +67,13 @@ class Benchmark:
 
         self.ssh = defaultdict()
 
+    # - Prompt
     def verbose(self, msg, level=0):
         if self.opts.verbose >= level:
             sys.stdout.write(msg)
             sys.stdout.flush()
 
+    # - Load config file, with config under certain profile
     def parse_config(self, cfg, profile):
         self.verbose("Loading configurations from %s with profile %s...\n" %
                      (cfg, profile), 0)
@@ -94,6 +101,7 @@ class Benchmark:
             if self.opts.verbose >= 1:
                 print "  %s: %s = %s" % (profile, name, self.config[name])
 
+    # - Getting running instances
     def get_instances(self, state='running', instance_types=''):
         instances = self.ec2.instances.filter(
             Filters=[{'Name': 'instance-state-name', 'Values': ['running']},
@@ -104,6 +112,7 @@ class Benchmark:
                          if instance.instance_type in instance_types]
         return instances
 
+    # - Create certain amount of certain type instance
     def create_instance(self, instance_type, count):
         self.verbose("  create: %s " % instance_type +
                      "(ami=%(ami)s, count=%(count)s, key=%(key)s)..." % self.config, 1)

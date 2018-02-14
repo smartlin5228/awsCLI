@@ -283,7 +283,9 @@ s3 =
                 self.verbose(stdout.read(), 2)
                 self.verbose(stderr.read(), 2)
 
-                # TODO: iPerf
+            # TODO: iPerf
+
+
 
     def clean(self):
         for instance in self.get_instances():

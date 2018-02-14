@@ -289,6 +289,10 @@ def copy_objects_by_thread(thread_id, copied_objects):
 
 timing_start()
 
+
+
+############################# cp object to other bucket using multi thread
+#############################  selected by prefix
 existing_prefixes = []
 for prefix in string.ascii_lowercase + string.digits:
     # HOWTO: use prefix to restrict listing objects
